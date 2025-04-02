@@ -23,6 +23,8 @@ price_scaler = MinMaxScaler(feature_range=(0, 1))
 y_train_scaled = price_scaler.fit_transform(y_train.reshape(-1, 1))
 y_test_scaled = price_scaler.transform(y_test.reshape(-1, 1))
 
+# TODO выводить доп. информацию об эпохах, + критерий остановки
+
 network = Network(sizes=[X_train.shape[1], 64, 32, 32, 1])
 network.SGD(training_data=list(zip(X_train, y_train_scaled)), epochs=10, mini_batch_size=10, eta=0.1)
 

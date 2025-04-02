@@ -36,5 +36,8 @@ history = model.fit(X_train, y_train, epochs=50, batch_size=32, validation_split
 
 y_pred = model.predict(X_test)
 
+# TODO выводить доп. информацию об эпохах, + критерий остановки
+
+# TODO add metrics
 for i in range(10):
     print(f'Predicted: {y_pred[i][0]}, Actual: {y_test[i]}')
