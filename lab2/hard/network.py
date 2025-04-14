@@ -18,7 +18,7 @@ class Network(object):
 
         return a
 
-    def SGD(self, training_data, epochs, mini_batch_size, eta):
+    def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None, categorical=False, stop_criteria=95.0):
         n = len(training_data)
         for j in range(epochs):
             time1 = time.time()
@@ -30,7 +30,40 @@ class Network(object):
                 self.update_mini_batch(mini_batch, eta)
 
             time2 = time.time()
-            print(f"Epoch {j} complete in {time2 - time1:.2f} seconds")
+
+            if test_data:
+                accuracy = self.evaluate_regression(test_data, categorical)
+                print(f"Epoch {j}: Accuracy = {accuracy:.2f}% | Time: {time2 - time1:.2f}s")
+                if accuracy >= stop_criteria:
+                    print(f"Stop criteria achieved!")
+                    break
+            else:
+                print(f"Epoch {j} complete in {time2 - time1:.2f} seconds")
+
+    def evaluate_regression(self, test_data, categorical):
+        """Вычисляет точность в % для регрессии на основе относительной ошибки"""
+        total_accuracy = 0
+        n_samples = len(test_data)
+
+        for x, y in test_data:
+            output = self.feedforward(x.reshape(-1, 1))
+
+            if categorical:
+                # Для категориальных данных - сравниваем индексы максимумов
+                predicted_class = np.argmax(output)
+                true_class = np.argmax(y)
+                total_accuracy += 100 if predicted_class == true_class else 0
+            else:
+                # Для регрессии - вычисляем относительную точность
+                prediction = output[0][0]
+                y_value = y[0] if isinstance(y, (np.ndarray, list)) else y
+
+                if y_value != 0:
+                    relative_error = abs(prediction - y_value) / abs(y_value)
+                    accuracy = max(0, 1 - relative_error)
+                    total_accuracy += accuracy * 100
+
+        return total_accuracy / n_samples if n_samples > 0 else 0
 
     def update_mini_batch(self, mini_batch, eta):
         nabla_b = [np.zeros(b.shape) for b in self.biases]
