@@ -41,7 +41,7 @@ predictions = [np.argmax(network.feedforward(x.reshape(-1, 1))) for x in X_test]
 true_labels = [np.argmax(y) for y in y_test]
 accuracy = accuracy_score(true_labels, predictions)
 
-print(f"\nИтоговая точность модели: {accuracy*100:.2f}%")
+print(f"Accuracy: {accuracy*100:.2f}%")
 
 pretty = lambda ind: f'[{bins[ind]} - {bins[ind+1]}]'
 for i in range(10):

@@ -49,14 +49,13 @@ class Network(object):
             output = self.feedforward(x.reshape(-1, 1))
 
             if categorical:
-                # Для категориальных данных - сравниваем индексы максимумов
                 predicted_class = np.argmax(output)
                 true_class = np.argmax(y)
                 total_accuracy += 100 if predicted_class == true_class else 0
             else:
-                # Для регрессии - вычисляем относительную точность
+
                 prediction = output[0][0]
-                y_value = y[0] if isinstance(y, (np.ndarray, list)) else y
+                y_value = y[0]
 
                 if y_value != 0:
                     relative_error = abs(prediction - y_value) / abs(y_value)
