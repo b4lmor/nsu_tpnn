@@ -80,54 +80,6 @@ class ReLULayer:
         return d_input
 
 
-class MaxPoolLayer:
-    def __init__(self, pool_size, stride):
-        self.pool_size = pool_size
-        self.stride = stride
-        self.last_input = None
-        self.max_indices = None
-
-    def forward(self, input):
-        self.last_input = input
-        channels, H, W = input.shape
-        H_out = (H - self.pool_size) // self.stride + 1
-        W_out = (W - self.pool_size) // self.stride + 1
-
-        output = np.zeros((channels, H_out, W_out))
-        # Stores (h, w) indices of max values for each window
-        self.max_indices = np.zeros((channels, H_out, W_out, 2), dtype=np.int32)
-
-        for c in range(channels):
-            for i in range(H_out):
-                h_start = i * self.stride
-                h_end = h_start + self.pool_size
-                for j in range(W_out):
-                    w_start = j * self.stride
-                    w_end = w_start + self.pool_size
-
-                    window = input[c, h_start:h_end, w_start:w_end]
-                    max_val = np.max(window)
-                    output[c, i, j] = max_val
-
-                    # Find position of max value in window
-                    h_max, w_max = np.unravel_index(np.argmax(window), window.shape)
-                    self.max_indices[c, i, j] = [h_start + h_max, w_start + w_max]
-
-        return output
-
-    def backward(self, d_out):
-        d_input = np.zeros_like(self.last_input)
-        channels_out, H_out, W_out = d_out.shape
-
-        for c in range(channels_out):
-            for i in range(H_out):
-                for j in range(W_out):
-                    h_idx, w_idx = self.max_indices[c, i, j]
-                    d_input[c, h_idx, w_idx] += d_out[c, i, j]
-
-        return d_input
-
-
 class AvgPoolLayer:
     def __init__(self, pool_size, stride):
         self.pool_size = pool_size
@@ -276,14 +228,3 @@ class Lenet5:
         d_out = self.relu1.backward(d_out)
         d_out = self.conv1.backward(d_out, learning_rate)
         return d_out
-
-
-def softmax_crossentropy_with_logits(logits, labels):
-    exps = np.exp(logits - np.max(logits, axis=1, keepdims=True))
-    probs = exps / np.sum(exps, axis=1, keepdims=True)
-    loss = -np.mean(np.sum(labels * np.log(probs + 1e-9), axis=1))
-    return loss, probs
-
-
-def grad_softmax_crossentropy(probs, labels):
-    return (probs - labels) / labels.shape[0]

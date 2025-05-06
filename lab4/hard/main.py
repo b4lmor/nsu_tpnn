@@ -52,9 +52,9 @@ def preprocess_data():
     test_images = np.pad(test_images, padding, mode='constant')
 
     # Use smaller subset for demonstration
-    train_images = train_images[:100]
+    train_images = train_images[:150]
     test_images = test_images[:500]
-    train_labels = train_labels[:100]
+    train_labels = train_labels[:150]
     test_labels = test_labels[:500]
 
     return train_images, train_labels, test_images, test_labels
@@ -135,13 +135,10 @@ def plot_confusion_matrix(model, test_images, test_labels):
 
 
 def main():
-    # Load and preprocess data
     train_images, train_labels, test_images, test_labels = preprocess_data()
 
-    # Initialize model
     model = Lenet5()
 
-    # Train model
     loss_history, accuracy_history = train_model(
         model,
         train_images,
@@ -152,7 +149,6 @@ def main():
         learning_rate=0.01
     )
 
-    # Visualize results
     plot_metrics(loss_history, accuracy_history)
     plot_confusion_matrix(model, test_images, test_labels)
 

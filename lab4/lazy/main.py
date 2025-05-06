@@ -9,6 +9,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classifica
 
 def load_and_preprocess_data():
     """Load and preprocess MNIST dataset."""
+
     (train_X, train_y), (test_X, test_y) = mnist.load_data()
 
     # Normalize and reshape
@@ -28,6 +29,7 @@ def load_and_preprocess_data():
 
 def build_lenet_model(learning_rate=0.001):
     """Build LeNet-5 model architecture."""
+
     model = keras.Sequential([
         layers.Conv2D(filters=6, kernel_size=(5, 5), activation='relu', input_shape=(32, 32, 1), padding='same'),
         layers.AveragePooling2D(pool_size=(2, 2), strides=2),
@@ -80,13 +82,10 @@ def plot_confusion_matrix(y_true, y_pred):
 
 
 def main():
-    # Load and preprocess data
     train_X, train_y, test_X, test_y = load_and_preprocess_data()
 
-    # Build model
     model = build_lenet_model(learning_rate=0.001)
 
-    # Train model
     history = model.fit(
         train_X, train_y,
         batch_size=128,
@@ -95,16 +94,11 @@ def main():
         validation_data=(test_X, test_y)
     )
 
-    # Evaluate model
     plot_training_history(history)
 
-    # Generate predictions and confusion matrix
     y_pred = np.argmax(model.predict(test_X), axis=1)
     y_true = np.argmax(test_y, axis=1)
     plot_confusion_matrix(y_true, y_pred)
-
-    # Print classification report
-    print(classification_report(y_true, y_pred))
 
 
 if __name__ == "__main__":
