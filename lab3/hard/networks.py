@@ -1,11 +1,10 @@
-import numpy as np
+import copy
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import List
+
+import numpy as np
 from numpy.core.multiarray import array as array
 from scipy.special import expit, softmax, log_softmax
-from sklearn.utils import shuffle
-from math import ceil
-import copy
 
 
 class Module(ABC):
@@ -119,15 +118,6 @@ class Sigmoid(Module):
         return grad_output * self.compute_output(input) * (1 - self.compute_output(input))
 
 
-class Softmax(Module):
-    def compute_output(self, input: np.array) -> np.array:
-        return softmax(input, axis=1)
-
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
-        return (grad_output - np.sum(grad_output * self.compute_output(input), axis=1,
-                                     keepdims=True)) * self.compute_output(input)
-
-
 class LogSoftmax(Module):
     def compute_output(self, input: np.array) -> np.array:
         return log_softmax(input, axis=1)
@@ -160,31 +150,12 @@ class Sigmoid(Module):
         return grad_output * self.compute_output(input) * (1 - self.compute_output(input))
 
 
-class Softmax(Module):
-    def compute_output(self, input: np.array) -> np.array:
-        return softmax(input, axis=1)
-
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
-        return (grad_output - np.sum(grad_output * self.compute_output(input), axis=1,
-                                     keepdims=True)) * self.compute_output(input)
-
-
 class LogSoftmax(Module):
     def compute_output(self, input: np.array) -> np.array:
         return log_softmax(input, axis=1)
 
     def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
         return grad_output - (np.sum(grad_output, axis=1, keepdims=True) * softmax(input, axis=1))
-
-
-class MSELoss(Criterion):
-    def compute_output(self, input: np.array, target: np.array) -> float:
-        assert input.shape == target.shape, 'input and target shapes not matching'
-        return np.sum(np.power((input - target), 2)) / (input.shape[0] * input.shape[1])
-
-    def compute_grad_input(self, input: np.array, target: np.array) -> np.array:
-        assert input.shape == target.shape, 'input and target shapes not matching'
-        return (2 / (input.shape[0] * input.shape[1])) * (input - target)
 
 
 class CrossEntropyLoss(Criterion):
@@ -198,38 +169,7 @@ class CrossEntropyLoss(Criterion):
 
     def compute_grad_input(self, input: np.array, target: np.array) -> np.array:
         return (-1 / input.shape[0]) * (
-                    np.where(np.arange(input.shape[1]) == target[:, None], 1, 0) - softmax(input, axis=1))
-
-
-class DataLoader(object):
-    def __init__(self, X, y, batch_size=1, shuffle=False):
-        assert X.shape[0] == y.shape[0]
-        self.X = X
-        self.y = y
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        self.batch_id = 0
-
-    def __len__(self) -> int:
-        return ceil(self.num_samples() / self.batch_size)
-
-    def num_samples(self) -> int:
-        return self.X.shape[0]
-
-    def __iter__(self):
-        self.batch_id = 0
-        if (self.shuffle):
-            self.X, self.y = shuffle(self.X, self.y)
-        return self
-
-    def __next__(self):
-        self.batch_id += 1
-        if self.batch_id < len(self):
-            return self.X[(self.batch_id - 1) * self.batch_size: self.batch_id * self.batch_size] \
-                , self.y[(self.batch_id - 1) * self.batch_size: self.batch_id * self.batch_size]
-        elif self.batch_id == len(self):
-            return self.X[(self.batch_id - 1) * self.batch_size:], self.y[(self.batch_id - 1) * self.batch_size:]
-        raise StopIteration
+                np.where(np.arange(input.shape[1]) == target[:, None], 1, 0) - softmax(input, axis=1))
 
 
 class Linear(Module):
@@ -277,52 +217,6 @@ class Linear(Module):
                f'bias={not self.bias is None})'
 
 
-class Sequential(Module):
-    def __init__(self, *args):
-        super().__init__()
-        self.modules = list(args)
-
-    def compute_output(self, input: np.array) -> np.array:
-        y = input
-        for module in self.modules:
-            y = module(y)
-        return y
-
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
-        grad_input = grad_output
-        for i in range(len(self.modules) - 1, 0, -1):
-            grad_input = self.modules[i].backward(self.modules[i - 1].output, grad_input)
-        return self.modules[0].backward(input, grad_input)
-
-    def __getitem__(self, item):
-        return self.modules[item]
-
-    def train(self):
-        for module in self.modules:
-            module.train()
-
-    def eval(self):
-        for module in self.modules:
-            module.eval()
-
-    def zero_grad(self):
-        for module in self.modules:
-            module.zero_grad()
-
-    def parameters(self) -> List[np.array]:
-        return [parameter for module in self.modules for parameter in module.parameters()]
-
-    def parameters_grad(self) -> List[np.array]:
-        return [grad for module in self.modules for grad in module.parameters_grad()]
-
-    def __repr__(self) -> str:
-        repr_str = 'Sequential(\n'
-        for module in self.modules:
-            repr_str += ' ' * 4 + repr(module) + '\n'
-        repr_str += ')'
-        return repr_str
-
-
 class SGD(Optimizer):
     def __init__(self, module: Module, lr: float = 1e-3, momentum: float = 0.0,
                  weight_decay: float = 0.0):
@@ -340,37 +234,6 @@ class SGD(Optimizer):
             g = grad + self.weight_decay * param
             np.add(self.momentum * m, g, out=m)
             np.add(param, -self.lr * m, out=param)
-
-
-class Adam(Optimizer):
-    def __init__(self, module: Module, lr: float = 1e-3,
-                 betas: Tuple[float, float] = (0.9, 0.999),
-                 eps: float = 1e-8, weight_decay: float = 0.0):
-        super().__init__(module)
-        self.lr = lr
-        self.beta1 = betas[0]
-        self.beta2 = betas[1]
-        self.eps = eps
-        self.weight_decay = weight_decay
-
-    def step(self):
-        parameters = self.module.parameters()
-        gradients = self.module.parameters_grad()
-        if 'm' not in self.state:
-            self.state['m'] = [np.zeros_like(param) for param in parameters]
-            self.state['v'] = [np.zeros_like(param) for param in parameters]
-            self.state['t'] = 0
-
-        self.state['t'] += 1
-        t = self.state['t']
-        for param, grad, m, v in zip(parameters, gradients, self.state['m'], self.state['v']):
-            g = grad + self.weight_decay * param
-            np.add(self.beta1 * m, (1 - self.beta1) * g, out=m)
-            np.add(self.beta2 * v, (1 - self.beta2) * np.power(g, 2), out=v)
-            m_avg = m / (1 - self.beta1 ** t)
-            v_avg = v / (1 - self.beta2 ** t)
-            np.add(param, (-self.lr * m_avg) / (np.sqrt(v_avg) + self.eps), out=param)
-            pass
 
 
 class RNNCell(Module):

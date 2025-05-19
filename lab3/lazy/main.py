@@ -22,7 +22,6 @@ MOMENTUM = 0.9
 
 
 def load_and_preprocess_data():
-    """???????? ? ??????????????? ????????? ??????"""
     steel_industry_energy_consumption = fetch_ucirepo(id=851)
 
     X = steel_industry_energy_consumption.data.features
@@ -46,7 +45,6 @@ def load_and_preprocess_data():
 
 
 class EnergyConsumptionDataset(Dataset):
-    """????????? Dataset ??? ??????????????????? ?????????????????"""
 
     def __init__(self, X, y, seq_length=1):
         self.X = torch.tensor(X, dtype=torch.float)
@@ -62,7 +60,6 @@ class EnergyConsumptionDataset(Dataset):
 
 
 def create_data_loaders(X_train, X_test, y_train, y_test, batch_size, seq_length):
-    """???????? DataLoader'?? ??? ???????? ? ????????????"""
 
     train_loader = DataLoader(
         EnergyConsumptionDataset(X_train, y_train, seq_length),
@@ -80,7 +77,6 @@ def create_data_loaders(X_train, X_test, y_train, y_test, batch_size, seq_length
 
 
 def plot_loss_acc(train_losses, test_losses, train_accuracies, test_accuracies):
-    """?????????? ???????? ?????? ? ????????"""
 
     clear_output()
     fig, axs = plt.subplots(1, 2, figsize=(13, 4))
@@ -146,7 +142,6 @@ class GRUClassifier(nn.Module):
 
 
 def train_model(model, train_loader, test_loader, model_name, num_epochs=NUM_EPOCHS):
-    """??????? ??? ???????? ??????"""
     optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=MOMENTUM)
     criterion = nn.CrossEntropyLoss()
 
@@ -154,7 +149,6 @@ def train_model(model, train_loader, test_loader, model_name, num_epochs=NUM_EPO
     train_accuracies, test_accuracies = [], []
 
     for epoch in tqdm(range(1, num_epochs + 1), desc=f"Training {model_name}"):
-        # ????????
         model.train()
         train_loss, train_accuracy = 0.0, 0.0
         for X_batch, y_batch in train_loader:
@@ -166,7 +160,6 @@ def train_model(model, train_loader, test_loader, model_name, num_epochs=NUM_EPO
             train_loss += loss.item() * X_batch.shape[0]
             train_accuracy += (predictions.argmax(axis=1) == y_batch).sum().item()
 
-        # ?????????
         model.eval()
         test_loss, test_accuracy = 0.0, 0.0
         with torch.no_grad():
@@ -176,13 +169,11 @@ def train_model(model, train_loader, test_loader, model_name, num_epochs=NUM_EPO
                 test_loss += loss.item() * X_batch.shape[0]
                 test_accuracy += (predictions.argmax(axis=1) == y_batch).sum().item()
 
-        # ???????????? ??????
         train_loss /= len(train_loader.dataset)
         test_loss /= len(test_loader.dataset)
         train_accuracy /= len(train_loader.dataset)
         test_accuracy /= len(test_loader.dataset)
 
-        # ?????????? ??????
         train_losses.append(train_loss)
         test_losses.append(test_loss)
         train_accuracies.append(train_accuracy)
@@ -197,10 +188,8 @@ def train_model(model, train_loader, test_loader, model_name, num_epochs=NUM_EPO
 
 
 def plot_comparison(results):
-    """?????????? ????????????? ???????? ??? ???? ???????"""
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-    # ??????? ?????? ?? ????????
     axes[0, 0].plot(results['RNN']['train_losses'], label='RNN', color='blue')
     axes[0, 0].plot(results['GRU']['train_losses'], label='GRU', color='green')
     axes[0, 0].plot(results['LSTM']['train_losses'], label='LSTM', color='red')
@@ -209,7 +198,6 @@ def plot_comparison(results):
     axes[0, 0].set_ylabel('Loss')
     axes[0, 0].legend()
 
-    # ??????? ???????? ?? ????????
     axes[0, 1].plot(results['RNN']['train_accuracies'], label='RNN', color='blue')
     axes[0, 1].plot(results['GRU']['train_accuracies'], label='GRU', color='green')
     axes[0, 1].plot(results['LSTM']['train_accuracies'], label='LSTM', color='red')
@@ -218,7 +206,6 @@ def plot_comparison(results):
     axes[0, 1].set_ylabel('Accuracy')
     axes[0, 1].legend()
 
-    # ??????? ?????? ?? ?????
     axes[1, 0].plot(results['RNN']['test_losses'], label='RNN', color='blue')
     axes[1, 0].plot(results['GRU']['test_losses'], label='GRU', color='green')
     axes[1, 0].plot(results['LSTM']['test_losses'], label='LSTM', color='red')
@@ -227,7 +214,6 @@ def plot_comparison(results):
     axes[1, 0].set_ylabel('Loss')
     axes[1, 0].legend()
 
-    # ??????? ???????? ?? ?????
     axes[1, 1].plot(results['RNN']['test_accuracies'], label='RNN', color='blue')
     axes[1, 1].plot(results['GRU']['test_accuracies'], label='GRU', color='green')
     axes[1, 1].plot(results['LSTM']['test_accuracies'], label='LSTM', color='red')
@@ -241,7 +227,6 @@ def plot_comparison(results):
 
 
 def print_comparison_table(results):
-    """????? ??????? ????????? ???????"""
     print("\nModel Comparison:")
     print(f"{'Model':<10} {'Train Loss':<12} {'Test Loss':<12} {'Train Acc':<12} {'Test Acc':<12}")
     print("-" * 50)
@@ -256,8 +241,6 @@ def print_comparison_table(results):
 
 
 def find_best_model(results):
-    """??????????? ?????? ?????? ?? ???????? ?? ???????? ??????"""
-
     final_test_accuracies = {
         model_name: metrics['test_accuracies'][-1]
         for model_name, metrics in results.items()
@@ -270,14 +253,11 @@ def find_best_model(results):
 
 
 def main():
-    # ???????? ? ??????????????? ????????? ??????
     X_train, X_test, y_train, y_test = load_and_preprocess_data()
 
-    # ???????? DataLoader'??
     train_loader, test_loader = create_data_loaders(
         X_train, X_test, y_train, y_test, BATCH_SIZE, SEQUENCE_LENGTH)
 
-    # ????????????? ???????
     input_size = X_train.shape[1]
     models = {
         'RNN': RNNClassifier(input_size, NUM_CLASSES, HIDDEN_SIZE),
@@ -285,19 +265,14 @@ def main():
         'LSTM': LSTMClassifier(input_size, NUM_CLASSES, HIDDEN_SIZE)
     }
 
-    # ???????? ??????? ? ???? ???????????
     results = {}
     for model_name, model in models.items():
-        results[model_name] = train_model(
-            model, train_loader, test_loader, model_name, NUM_EPOCHS)
+        results[model_name] = train_model(model, train_loader, test_loader, model_name, NUM_EPOCHS)
 
-    # ???????????? ???????????
     plot_comparison(results)
 
-    # ????? ??????????? ?????????
     print_comparison_table(results)
 
-    # ??????????? ?????? ??????
     find_best_model(results)
 
 
