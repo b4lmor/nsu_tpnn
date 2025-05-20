@@ -1,6 +1,5 @@
 import copy
 from abc import ABC, abstractmethod
-from typing import List
 
 import numpy as np
 from numpy.core.multiarray import array as array
@@ -13,24 +12,24 @@ class Module(ABC):
         self.training = True
 
     @abstractmethod
-    def compute_output(self, input, *args, **kwargs) -> np.array:
+    def compute_output(self, input, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
-    def compute_grad_input(self, input, *args, **kwargs) -> np.array:
+    def compute_grad_input(self, input, *args, **kwargs):
         raise NotImplementedError
 
     def update_grad_parameters(self, input, *args, **kwargs):
         pass
 
-    def __call__(self, input: np.array, *args, **kwargs) -> np.array:
+    def __call__(self, input: np.array, *args, **kwargs):
         return self.forward(input, *args, **kwargs)
 
-    def forward(self, input: np.array, *args, **kwargs) -> np.array:
+    def forward(self, input: np.array, *args, **kwargs):
         self.output = self.compute_output(input, *args, **kwargs)
         return self.output
 
-    def backward(self, input: np.array, *args, **kwargs) -> np.array:
+    def backward(self, input: np.array, *args, **kwargs):
         grad_input = self.compute_grad_input(input, *args, **kwargs)
         self.update_grad_parameters(input, *args, **kwargs)
         return grad_input
@@ -44,14 +43,11 @@ class Module(ABC):
     def zero_grad(self):
         pass
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         return []
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         return []
-
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}()'
 
 
 class Criterion(ABC):
@@ -59,26 +55,23 @@ class Criterion(ABC):
         self.output = None
 
     @abstractmethod
-    def compute_output(self, input: np.array, target: np.array) -> float:
+    def compute_output(self, input: np.array, target: np.array):
         raise NotImplementedError
 
     @abstractmethod
-    def compute_grad_input(self, input: np.array, target: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, target: np.array):
         raise NotImplementedError
 
-    def __call__(self, input: np.array, target: np.array) -> float:
+    def __call__(self, input: np.array, target: np.array):
         return self.forward(input, target)
 
-    def forward(self, input: np.array, target: np.array) -> float:
+    def forward(self, input: np.array, target: np.array):
         self.output = self.compute_output(input, target)
         return self.output
 
-    def backward(self, input: np.array, target: np.array) -> np.array:
+    def backward(self, input: np.array, target: np.array):
         grad_input = self.compute_grad_input(input, target)
         return grad_input
-
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}()'
 
 
 class Optimizer(ABC):
@@ -95,66 +88,34 @@ class Optimizer(ABC):
 
 
 class ReLU(Module):
-    def compute_output(self, input: np.array) -> np.array:
+    def compute_output(self, input: np.array):
         return np.where(input > 0, input, 0)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, grad_output: np.array):
         return grad_output * np.where(input > 0, 1, 0)
 
 
 class Tanh(Module):
-    def compute_output(self, input: np.array) -> np.array:
+    def compute_output(self, input: np.array):
         return np.tanh(input)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, grad_output: np.array):
         return grad_output * (1 - (self.compute_output(input) ** 2))
 
 
 class Sigmoid(Module):
-    def compute_output(self, input: np.array) -> np.array:
+    def compute_output(self, input: np.array):
         return expit(input)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, grad_output: np.array):
         return grad_output * self.compute_output(input) * (1 - self.compute_output(input))
 
 
 class LogSoftmax(Module):
-    def compute_output(self, input: np.array) -> np.array:
+    def compute_output(self, input: np.array):
         return log_softmax(input, axis=1)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
-        return grad_output - (np.sum(grad_output, axis=1, keepdims=True) * softmax(input, axis=1))
-
-
-class ReLU(Module):
-    def compute_output(self, input: np.array) -> np.array:
-        return np.where(input > 0, input, 0)
-
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
-        return grad_output * np.where(input > 0, 1, 0)
-
-
-class Tanh(Module):
-    def compute_output(self, input: np.array) -> np.array:
-        return np.tanh(input)
-
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
-        return grad_output * (1 - (self.compute_output(input) ** 2))
-
-
-class Sigmoid(Module):
-    def compute_output(self, input: np.array) -> np.array:
-        return expit(input)
-
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
-        return grad_output * self.compute_output(input) * (1 - self.compute_output(input))
-
-
-class LogSoftmax(Module):
-    def compute_output(self, input: np.array) -> np.array:
-        return log_softmax(input, axis=1)
-
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, grad_output: np.array):
         return grad_output - (np.sum(grad_output, axis=1, keepdims=True) * softmax(input, axis=1))
 
 
@@ -163,11 +124,11 @@ class CrossEntropyLoss(Criterion):
         super().__init__()
         self.log_softmax = LogSoftmax()
 
-    def compute_output(self, input: np.array, target: np.array) -> float:
+    def compute_output(self, input: np.array, target: np.array):
         return (-1 / input.shape[0]) * np.sum(
             input[np.arange(input.shape[0]), target] - np.log(np.sum(np.exp(input), axis=1)))
 
-    def compute_grad_input(self, input: np.array, target: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, target: np.array):
         return (-1 / input.shape[0]) * (
                 np.where(np.arange(input.shape[1]) == target[:, None], 1, 0) - softmax(input, axis=1))
 
@@ -183,12 +144,12 @@ class Linear(Module):
         self.grad_weight = np.zeros_like(self.weight)
         self.grad_bias = np.zeros_like(self.bias) if bias else None
 
-    def compute_output(self, input: np.array) -> np.array:
+    def compute_output(self, input: np.array):
         if self.bias is not None:
             return input @ self.weight.T + self.bias
         return input @ self.weight.T
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, grad_output: np.array):
         return grad_output @ self.weight
 
     def update_grad_parameters(self, input: np.array, grad_output: np.array):
@@ -201,20 +162,15 @@ class Linear(Module):
         if self.bias is not None:
             self.grad_bias.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         if self.bias is not None:
             return [self.weight, self.bias]
         return [self.weight]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         if self.bias is not None:
             return [self.grad_weight, self.grad_bias]
         return [self.grad_weight]
-
-    def __repr__(self) -> str:
-        out_features, in_features = self.weight.shape
-        return f'Linear(in_features={in_features}, out_features={out_features}, ' \
-               f'bias={not self.bias is None})'
 
 
 class SGD(Optimizer):
@@ -251,7 +207,7 @@ class RNNCell(Module):
 
         self.cache = None
 
-    def compute_output(self, input: np.array, hx: np.array) -> np.array:
+    def compute_output(self, input: np.array, hx: np.array):
         relu = ReLU()
         if self.bias_hh is not None:
             self.cache = input @ self.weight_ih.T + self.bias_ih + hx @ self.weight_hh.T + self.bias_hh
@@ -259,7 +215,7 @@ class RNNCell(Module):
         self.cache = input @ self.weight_ih.T + hx @ self.weight_hh.T
         return relu(self.cache)
 
-    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array):
         relu = ReLU()
         ReLU_grad = relu.backward(self.cache, grad_output)
         return ReLU_grad @ self.weight_hh
@@ -280,20 +236,15 @@ class RNNCell(Module):
             self.grad_bias_hh.fill(0)
             self.grad_bias_ih.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         if self.bias_hh is not None:
             return [self.weight_ih, self.weight_hh, self.bias_ih, self.bias_hh]
         return [self.weight_ih, self.weight_hh]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         if self.bias_hh is not None:
             return [self.grad_weight_ih, self.grad_weight_hh, self.grad_bias_ih, self.grad_bias_hh]
         return [self.grad_weight_ih, self.grad_weight_hh]
-
-    def __repr__(self) -> str:
-        hidden_size, input_size = self.weight_ih.shape
-        return f'RNNCell(input_size={input_size}, out_features={hidden_size}, ' \
-               f'bias={not self.bias is None})'
 
 
 class RNN(Module):
@@ -316,14 +267,14 @@ class RNN(Module):
         self.grad_bias_ih_l0 = np.zeros_like(self.bias_ih_l0)
         self.grad_bias_hh_l0 = np.zeros_like(self.bias_hh_l0)
 
-    def compute_output(self, input: np.array, hx: np.array) -> np.array:
+    def compute_output(self, input: np.array, hx: np.array):
         self.modules = [copy.deepcopy(self.module) for _ in range(input.shape[1])]
         y = hx[0]
         for i in range(len(self.modules)):
             y = self.modules[i](input[:, i, :], y)
         return y
 
-    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array):
         grad_input = grad_output[0]
         for i in range(len(self.modules) - 1, 0, -1):
             grad_input = self.modules[i].backward(input[:, i, :], self.modules[i - 1].output, grad_input)
@@ -358,19 +309,15 @@ class RNN(Module):
             self.grad_bias_hh_l0.fill(0)
             self.grad_bias_ih_l0.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         if self.bias_hh_l0 is not None:
             return [self.weight_ih_l0, self.weight_hh_l0, self.bias_ih_l0, self.bias_hh_l0]
         return [self.weight_ih_l0, self.weight_hh_l0]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         if self.bias_hh_l0 is not None:
             return [self.grad_weight_ih_l0, self.grad_weight_hh_l0, self.grad_bias_ih_l0, self.grad_bias_hh_l0]
         return [self.grad_weight_ih_l0, self.grad_weight_hh_l0]
-
-    def __repr__(self) -> str:
-        return f'RNN(input_size={self.input_size}, out_features={self.hidden_size}, ' \
-               f'bias={not self.bias is None})'
 
 
 class LSTMCell(Module):
@@ -395,7 +342,7 @@ class LSTMCell(Module):
         self.next_cell_state = None
         self.next_hidden_state = None
 
-    def compute_output(self, input: np.array, hx: np.array, cx: np.array) -> np.array:
+    def compute_output(self, input: np.array, hx: np.array, cx: np.array):
         tanh = Tanh()
         sigmoid = Sigmoid()
         A = input @ self.weight_ih.T + hx @ self.weight_hh.T
@@ -410,7 +357,7 @@ class LSTMCell(Module):
         return self.next_hidden_state, self.next_cell_state
 
     def compute_grad_input(self, input: np.array, hx: np.array, cx: np.array, grad_hx: np.array,
-                           grad_cx: np.array) -> np.array:
+                           grad_cx: np.array):
         tanh = Tanh()
         tanh_grad = tanh.compute_grad_input(self.next_cell_state, grad_hx * self.output_gate)
 
@@ -446,20 +393,15 @@ class LSTMCell(Module):
             self.grad_bias_hh.fill(0)
             self.grad_bias_ih.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         if self.bias_hh is not None:
             return [self.weight_ih, self.weight_hh, self.bias_ih, self.bias_hh]
         return [self.weight_ih, self.weight_hh]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         if self.bias_hh is not None:
             return [self.grad_weight_ih, self.grad_weight_hh, self.grad_bias_ih, self.grad_bias_hh]
         return [self.grad_weight_ih, self.grad_weight_hh]
-
-    def __repr__(self) -> str:
-        hidden_size, input_size = self.weight_ih.shape
-        return f'RNNCell(input_size={input_size}, out_features={hidden_size}, ' \
-               f'bias={not self.bias is None})'
 
 
 class LSTM(Module):
@@ -481,7 +423,7 @@ class LSTM(Module):
         self.grad_bias_ih_l0 = np.zeros_like(self.bias_ih_l0)
         self.grad_bias_hh_l0 = np.zeros_like(self.bias_hh_l0)
 
-    def compute_output(self, input: np.array, hx: np.array, cx: np.array) -> np.array:
+    def compute_output(self, input: np.array, hx: np.array, cx: np.array):
         self.modules = [copy.deepcopy(self.module) for _ in range(input.shape[1])]
         hx = hx[0]
         cx = cx[0]
@@ -489,7 +431,7 @@ class LSTM(Module):
             hx, cx = self.modules[i](input[:, i, :], hx, cx)
         return hx, cx
 
-    def compute_grad_input(self, input: np.array, hx: np.array, cx: np.array, grad_hx: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, hx: np.array, cx: np.array, grad_hx: np.array):
         grad_hx = grad_hx[0]
         grad_cx = np.zeros_like(grad_hx)
         for i in range(len(self.modules) - 1, 0, -1):
@@ -529,19 +471,15 @@ class LSTM(Module):
             self.grad_bias_hh_l0.fill(0)
             self.grad_bias_ih_l0.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         if self.bias_hh_l0 is not None:
             return [self.weight_ih_l0, self.weight_hh_l0, self.bias_ih_l0, self.bias_hh_l0]
         return [self.weight_ih_l0, self.weight_hh_l0]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         if self.bias_hh_l0 is not None:
             return [self.grad_weight_ih_l0, self.grad_weight_hh_l0, self.grad_bias_ih_l0, self.grad_bias_hh_l0]
         return [self.grad_weight_ih_l0, self.grad_weight_hh_l0]
-
-    def __repr__(self) -> str:
-        return f'RNN(input_size={self.input_size}, out_features={self.hidden_size}, ' \
-               f'bias={not self.bias is None})'
 
 
 class GRUCell(Module):
@@ -567,7 +505,7 @@ class GRUCell(Module):
 
         self.cache = None
 
-    def compute_output(self, input: np.array, hx: np.array) -> np.array:
+    def compute_output(self, input: np.array, hx: np.array):
         sigmoid = Sigmoid()
         tanh = Tanh()
         self.input_vec = input @ self.weight_ih.T
@@ -582,7 +520,7 @@ class GRUCell(Module):
                       self.r * self.hidden_vec[:, 2 * self.hidden_size: 3 * self.hidden_size])
         return (1 - self.z) * self.n + self.z * hx
 
-    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array):
         grad_n = (grad_output * (1 - self.z) * (1 - (self.n ** 2)))
         grad_z = (grad_output * (-self.n + hx) * self.z * (1 - self.z))
         grad_r = ((grad_output * (1 - self.z) * (1 - (self.n ** 2))) *
@@ -609,20 +547,15 @@ class GRUCell(Module):
             self.grad_bias_hh.fill(0)
             self.grad_bias_ih.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         if self.bias_hh is not None:
             return [self.weight_ih, self.weight_hh, self.bias_ih, self.bias_hh]
         return [self.weight_ih, self.weight_hh]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         if self.bias_hh is not None:
             return [self.grad_weight_ih, self.grad_weight_hh, self.grad_bias_ih, self.grad_bias_hh]
         return [self.grad_weight_ih, self.grad_weight_hh]
-
-    def __repr__(self) -> str:
-        hidden_size, input_size = self.weight_ih.shape
-        return f'RNNCell(input_size={input_size}, out_features={hidden_size}, ' \
-               f'bias={not self.bias is None})'
 
 
 class GRU(Module):
@@ -644,14 +577,14 @@ class GRU(Module):
         self.grad_bias_ih_l0 = np.zeros_like(self.bias_ih_l0)
         self.grad_bias_hh_l0 = np.zeros_like(self.bias_hh_l0)
 
-    def compute_output(self, input: np.array, hx: np.array) -> np.array:
+    def compute_output(self, input: np.array, hx: np.array):
         self.modules = [copy.deepcopy(self.module) for _ in range(input.shape[1])]
         y = hx[0]
         for i in range(len(self.modules)):
             y = self.modules[i](input[:, i, :], y)
         return y
 
-    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array):
         grad_input = grad_output[0]
         for i in range(len(self.modules) - 1, 0, -1):
             grad_input = self.modules[i].backward(input[:, i, :], self.modules[i - 1].output, grad_input)
@@ -686,19 +619,15 @@ class GRU(Module):
             self.grad_bias_hh_l0.fill(0)
             self.grad_bias_ih_l0.fill(0)
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         if self.bias_hh_l0 is not None:
             return [self.weight_ih_l0, self.weight_hh_l0, self.bias_ih_l0, self.bias_hh_l0]
         return [self.weight_ih_l0, self.weight_hh_l0]
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         if self.bias_hh_l0 is not None:
             return [self.grad_weight_ih_l0, self.grad_weight_hh_l0, self.grad_bias_ih_l0, self.grad_bias_hh_l0]
         return [self.grad_weight_ih_l0, self.grad_weight_hh_l0]
-
-    def __repr__(self) -> str:
-        return f'RNN(input_size={self.input_size}, out_features={self.hidden_size}, ' \
-               f'bias={not self.bias is None})'
 
 
 class RNN_Classifier(Module):
@@ -711,7 +640,7 @@ class RNN_Classifier(Module):
         self.encoder = module(in_features, hidden_size)
         self.head = Linear(hidden_size, num_classes)
 
-    def compute_output(self, input: np.array) -> np.array:
+    def compute_output(self, input: np.array):
         self.h1 = np.zeros((1, input.shape[0], self.hidden_size))
         if isinstance(self.encoder, LSTM):
             self.c1 = np.zeros((1, input.shape[0], self.hidden_size))
@@ -720,7 +649,7 @@ class RNN_Classifier(Module):
             out = self.encoder(input, self.h1)
         return self.head(out)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array) -> np.array:
+    def compute_grad_input(self, input: np.array, grad_output: np.array):
         if isinstance(self.encoder, LSTM):
             return self.encoder.backward(input, self.h1, self.c1,
                                          self.head.backward(self.encoder.output[0], grad_output)[np.newaxis, :])[0]
@@ -739,8 +668,8 @@ class RNN_Classifier(Module):
         self.encoder.zero_grad()
         self.head.zero_grad()
 
-    def parameters(self) -> List[np.array]:
+    def parameters(self):
         return self.encoder.parameters() + self.head.parameters()
 
-    def parameters_grad(self) -> List[np.array]:
+    def parameters_grad(self):
         return self.encoder.parameters_grad() + self.head.parameters_grad()

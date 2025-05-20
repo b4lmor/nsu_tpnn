@@ -25,7 +25,7 @@ def train_model(model, train_loader, test_loader, model_name, num_epochs=NUM_EPO
 
     RNN_train_losses, RNN_train_accuracies = [], []
     RNN_test_losses, RNN_test_accuracies = [], []
-    for epoch in tqdm(range(1, num_epochs + 1), desc=f"Training {model_name}"):
+    for _ in tqdm(range(1, num_epochs + 1), desc=f"Training {model_name}"):
         RNN_train_loss, RNN_train_accuracy = 0.0, 0.0
         model.train()
         for X_batch, y_batch in train_loader:
