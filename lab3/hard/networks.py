@@ -1,35 +1,32 @@
 import copy
-from abc import ABC, abstractmethod
 
 import numpy as np
 from numpy.core.multiarray import array as array
 from scipy.special import expit, softmax, log_softmax
 
 
-class Module(ABC):
+class Module():
     def __init__(self):
         self.output = None
         self.training = True
 
-    @abstractmethod
     def compute_output(self, input, *args, **kwargs):
         raise NotImplementedError
 
-    @abstractmethod
     def compute_grad_input(self, input, *args, **kwargs):
         raise NotImplementedError
 
     def update_grad_parameters(self, input, *args, **kwargs):
         pass
 
-    def __call__(self, input: np.array, *args, **kwargs):
+    def __call__(self, input, *args, **kwargs):
         return self.forward(input, *args, **kwargs)
 
-    def forward(self, input: np.array, *args, **kwargs):
+    def forward(self, input, *args, **kwargs):
         self.output = self.compute_output(input, *args, **kwargs)
         return self.output
 
-    def backward(self, input: np.array, *args, **kwargs):
+    def backward(self, input, *args, **kwargs):
         grad_input = self.compute_grad_input(input, *args, **kwargs)
         self.update_grad_parameters(input, *args, **kwargs)
         return grad_input
@@ -50,31 +47,29 @@ class Module(ABC):
         return []
 
 
-class Criterion(ABC):
+class Criterion():
     def __init__(self):
         self.output = None
 
-    @abstractmethod
-    def compute_output(self, input: np.array, target: np.array):
+    def compute_output(self, input, target):
         raise NotImplementedError
 
-    @abstractmethod
-    def compute_grad_input(self, input: np.array, target: np.array):
+    def compute_grad_input(self, input, target):
         raise NotImplementedError
 
-    def __call__(self, input: np.array, target: np.array):
+    def __call__(self, input, target):
         return self.forward(input, target)
 
-    def forward(self, input: np.array, target: np.array):
+    def forward(self, input, target):
         self.output = self.compute_output(input, target)
         return self.output
 
-    def backward(self, input: np.array, target: np.array):
+    def backward(self, input, target):
         grad_input = self.compute_grad_input(input, target)
         return grad_input
 
 
-class Optimizer(ABC):
+class Optimizer():
     def __init__(self, module: Module):
         self.module = module
         self.state = {}
@@ -82,40 +77,39 @@ class Optimizer(ABC):
     def zero_grad(self):
         self.module.zero_grad()
 
-    @abstractmethod
     def step(self):
         raise NotImplementedError
 
 
 class ReLU(Module):
-    def compute_output(self, input: np.array):
+    def compute_output(self, input):
         return np.where(input > 0, input, 0)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, grad_output):
         return grad_output * np.where(input > 0, 1, 0)
 
 
 class Tanh(Module):
-    def compute_output(self, input: np.array):
+    def compute_output(self, input):
         return np.tanh(input)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, grad_output):
         return grad_output * (1 - (self.compute_output(input) ** 2))
 
 
 class Sigmoid(Module):
-    def compute_output(self, input: np.array):
+    def compute_output(self, input):
         return expit(input)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, grad_output):
         return grad_output * self.compute_output(input) * (1 - self.compute_output(input))
 
 
 class LogSoftmax(Module):
-    def compute_output(self, input: np.array):
+    def compute_output(self, input):
         return log_softmax(input, axis=1)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, grad_output):
         return grad_output - (np.sum(grad_output, axis=1, keepdims=True) * softmax(input, axis=1))
 
 
@@ -124,17 +118,17 @@ class CrossEntropyLoss(Criterion):
         super().__init__()
         self.log_softmax = LogSoftmax()
 
-    def compute_output(self, input: np.array, target: np.array):
+    def compute_output(self, input, target):
         return (-1 / input.shape[0]) * np.sum(
             input[np.arange(input.shape[0]), target] - np.log(np.sum(np.exp(input), axis=1)))
 
-    def compute_grad_input(self, input: np.array, target: np.array):
+    def compute_grad_input(self, input, target):
         return (-1 / input.shape[0]) * (
                 np.where(np.arange(input.shape[1]) == target[:, None], 1, 0) - softmax(input, axis=1))
 
 
 class Linear(Module):
-    def __init__(self, in_features: int, out_features: int, bias: bool = True):
+    def __init__(self, in_features, out_features, bias = True):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -144,15 +138,15 @@ class Linear(Module):
         self.grad_weight = np.zeros_like(self.weight)
         self.grad_bias = np.zeros_like(self.bias) if bias else None
 
-    def compute_output(self, input: np.array):
+    def compute_output(self, input):
         if self.bias is not None:
             return input @ self.weight.T + self.bias
         return input @ self.weight.T
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, grad_output):
         return grad_output @ self.weight
 
-    def update_grad_parameters(self, input: np.array, grad_output: np.array):
+    def update_grad_parameters(self, input, grad_output):
         if self.bias is not None:
             self.grad_bias += np.sum(grad_output, axis=0)
         self.grad_weight += grad_output.T @ input
@@ -193,7 +187,7 @@ class SGD(Optimizer):
 
 
 class RNNCell(Module):
-    def __init__(self, input_size: int, hidden_size: int, bias: bool = True, nonlinearity: str = 'relu'):
+    def __init__(self, input_size, hidden_size, bias = True, nonlinearity = 'relu'):
         super().__init__()
         self.weight_ih = np.random.uniform(-1, 1, (hidden_size, input_size)) / np.sqrt(hidden_size)
         self.weight_hh = np.random.uniform(-1, 1, (hidden_size, hidden_size)) / np.sqrt(hidden_size)
@@ -207,7 +201,7 @@ class RNNCell(Module):
 
         self.cache = None
 
-    def compute_output(self, input: np.array, hx: np.array):
+    def compute_output(self, input, hx):
         relu = ReLU()
         if self.bias_hh is not None:
             self.cache = input @ self.weight_ih.T + self.bias_ih + hx @ self.weight_hh.T + self.bias_hh
@@ -215,12 +209,12 @@ class RNNCell(Module):
         self.cache = input @ self.weight_ih.T + hx @ self.weight_hh.T
         return relu(self.cache)
 
-    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, hx, grad_output):
         relu = ReLU()
         ReLU_grad = relu.backward(self.cache, grad_output)
         return ReLU_grad @ self.weight_hh
 
-    def update_grad_parameters(self, input: np.array, hx: np.array, grad_hx: np.array):
+    def update_grad_parameters(self, input, hx, grad_hx):
         relu = ReLU()
         ReLU_grad = relu.backward(self.cache, grad_hx)
         if self.bias_ih is not None:
@@ -248,7 +242,7 @@ class RNNCell(Module):
 
 
 class RNN(Module):
-    def __init__(self, input_size: int, hidden_size: int, bias: bool = True, nonlinearity: str = 'relu'):
+    def __init__(self, input_size, hidden_size, bias = True, nonlinearity = 'relu'):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -267,20 +261,20 @@ class RNN(Module):
         self.grad_bias_ih_l0 = np.zeros_like(self.bias_ih_l0)
         self.grad_bias_hh_l0 = np.zeros_like(self.bias_hh_l0)
 
-    def compute_output(self, input: np.array, hx: np.array):
+    def compute_output(self, input, hx):
         self.modules = [copy.deepcopy(self.module) for _ in range(input.shape[1])]
         y = hx[0]
         for i in range(len(self.modules)):
             y = self.modules[i](input[:, i, :], y)
         return y
 
-    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, hx, grad_output):
         grad_input = grad_output[0]
         for i in range(len(self.modules) - 1, 0, -1):
             grad_input = self.modules[i].backward(input[:, i, :], self.modules[i - 1].output, grad_input)
         return self.modules[0].backward(input[:, 0, :], hx[0], grad_input)
 
-    def update_grad_parameters(self, input: np.array, hx: np.array, grad_output: np.array):
+    def update_grad_parameters(self, input, hx, grad_output):
         for module in self.modules:
             for rnn_grad, rnn_cell_grad in zip(self.parameters_grad(), module.parameters_grad()):
                 rnn_grad += rnn_cell_grad
@@ -321,7 +315,7 @@ class RNN(Module):
 
 
 class LSTMCell(Module):
-    def __init__(self, input_size: int, hidden_size: int, bias: bool = True):
+    def __init__(self, input_size, hidden_size, bias = True):
         super().__init__()
         self.weight_ih = np.random.uniform(-1, 1, (4 * hidden_size, input_size)) / np.sqrt(hidden_size)
         self.weight_hh = np.random.uniform(-1, 1, (4 * hidden_size, hidden_size)) / np.sqrt(hidden_size)
@@ -342,7 +336,7 @@ class LSTMCell(Module):
         self.next_cell_state = None
         self.next_hidden_state = None
 
-    def compute_output(self, input: np.array, hx: np.array, cx: np.array):
+    def compute_output(self, input, hx, cx):
         tanh = Tanh()
         sigmoid = Sigmoid()
         A = input @ self.weight_ih.T + hx @ self.weight_hh.T
@@ -356,8 +350,8 @@ class LSTMCell(Module):
         self.next_hidden_state = self.output_gate * tanh(self.next_cell_state)
         return self.next_hidden_state, self.next_cell_state
 
-    def compute_grad_input(self, input: np.array, hx: np.array, cx: np.array, grad_hx: np.array,
-                           grad_cx: np.array):
+    def compute_grad_input(self, input, hx, cx, grad_hx,
+                           grad_cx):
         tanh = Tanh()
         tanh_grad = tanh.compute_grad_input(self.next_cell_state, grad_hx * self.output_gate)
 
@@ -379,7 +373,7 @@ class LSTMCell(Module):
         grad_next_hidden_state = self.ifgo_grad @ self.weight_hh
         return grad_next_hidden_state, grad_next_cell_state
 
-    def update_grad_parameters(self, input: np.array, hx: np.array, cx: np.array, grad_hx: np.array, grad_cx: np.array):
+    def update_grad_parameters(self, input, hx, cx, grad_hx, grad_cx):
         self.grad_weight_ih += self.ifgo_grad.T @ input
         self.grad_weight_hh += self.ifgo_grad.T @ hx
         if self.bias_hh is not None:
@@ -405,7 +399,7 @@ class LSTMCell(Module):
 
 
 class LSTM(Module):
-    def __init__(self, input_size: int, hidden_size: int, bias: bool = True):
+    def __init__(self, input_size, hidden_size, bias = True):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -423,7 +417,7 @@ class LSTM(Module):
         self.grad_bias_ih_l0 = np.zeros_like(self.bias_ih_l0)
         self.grad_bias_hh_l0 = np.zeros_like(self.bias_hh_l0)
 
-    def compute_output(self, input: np.array, hx: np.array, cx: np.array):
+    def compute_output(self, input, hx, cx):
         self.modules = [copy.deepcopy(self.module) for _ in range(input.shape[1])]
         hx = hx[0]
         cx = cx[0]
@@ -431,7 +425,7 @@ class LSTM(Module):
             hx, cx = self.modules[i](input[:, i, :], hx, cx)
         return hx, cx
 
-    def compute_grad_input(self, input: np.array, hx: np.array, cx: np.array, grad_hx: np.array):
+    def compute_grad_input(self, input, hx, cx, grad_hx):
         grad_hx = grad_hx[0]
         grad_cx = np.zeros_like(grad_hx)
         for i in range(len(self.modules) - 1, 0, -1):
@@ -439,7 +433,7 @@ class LSTM(Module):
             grad_hx, grad_cx = self.modules[i].backward(input[:, i, :], h_t, c_t, grad_hx, grad_cx)
         return self.modules[0].backward(input[:, 0, :], hx[0], cx[0], grad_hx, grad_cx)
 
-    def update_grad_parameters(self, input: np.array, hx: np.array, cx: np.array, grad_hx: np.array):
+    def update_grad_parameters(self, input, hx, cx, grad_hx):
         for module in self.modules:
             for rnn_grad, rnn_cell_grad in zip(self.parameters_grad(), module.parameters_grad()):
                 rnn_grad += rnn_cell_grad
@@ -483,7 +477,7 @@ class LSTM(Module):
 
 
 class GRUCell(Module):
-    def __init__(self, input_size: int, hidden_size: int, bias: bool = True):
+    def __init__(self, input_size, hidden_size, bias = True):
         super().__init__()
         self.weight_ih = np.random.uniform(-1, 1, (3 * hidden_size, input_size)) / np.sqrt(hidden_size)
         self.weight_hh = np.random.uniform(-1, 1, (3 * hidden_size, hidden_size)) / np.sqrt(hidden_size)
@@ -505,7 +499,7 @@ class GRUCell(Module):
 
         self.cache = None
 
-    def compute_output(self, input: np.array, hx: np.array):
+    def compute_output(self, input, hx):
         sigmoid = Sigmoid()
         tanh = Tanh()
         self.input_vec = input @ self.weight_ih.T
@@ -520,7 +514,7 @@ class GRUCell(Module):
                       self.r * self.hidden_vec[:, 2 * self.hidden_size: 3 * self.hidden_size])
         return (1 - self.z) * self.n + self.z * hx
 
-    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, hx, grad_output):
         grad_n = (grad_output * (1 - self.z) * (1 - (self.n ** 2)))
         grad_z = (grad_output * (-self.n + hx) * self.z * (1 - self.z))
         grad_r = ((grad_output * (1 - self.z) * (1 - (self.n ** 2))) *
@@ -530,7 +524,7 @@ class GRUCell(Module):
         grad_A_h[:, 2 * self.hidden_size: 3 * self.hidden_size] *= self.r
         return grad_A_h @ self.weight_hh + grad_output * self.z
 
-    def update_grad_parameters(self, input: np.array, hx: np.array, grad_hx: np.array):
+    def update_grad_parameters(self, input, hx, grad_hx):
         self.grad_weight_ih += self.grad_A.T @ input
 
         grad_A_weight_hh = self.grad_A.copy()
@@ -559,7 +553,7 @@ class GRUCell(Module):
 
 
 class GRU(Module):
-    def __init__(self, input_size: int, hidden_size: int, bias: bool = True):
+    def __init__(self, input_size, hidden_size, bias = True):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -577,20 +571,20 @@ class GRU(Module):
         self.grad_bias_ih_l0 = np.zeros_like(self.bias_ih_l0)
         self.grad_bias_hh_l0 = np.zeros_like(self.bias_hh_l0)
 
-    def compute_output(self, input: np.array, hx: np.array):
+    def compute_output(self, input, hx):
         self.modules = [copy.deepcopy(self.module) for _ in range(input.shape[1])]
         y = hx[0]
         for i in range(len(self.modules)):
             y = self.modules[i](input[:, i, :], y)
         return y
 
-    def compute_grad_input(self, input: np.array, hx: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, hx, grad_output):
         grad_input = grad_output[0]
         for i in range(len(self.modules) - 1, 0, -1):
             grad_input = self.modules[i].backward(input[:, i, :], self.modules[i - 1].output, grad_input)
         return self.modules[0].backward(input[:, 0, :], hx[0], grad_input)
 
-    def update_grad_parameters(self, input: np.array, hx: np.array, grad_output: np.array):
+    def update_grad_parameters(self, input, hx, grad_output):
         for module in self.modules:
             for rnn_grad, rnn_cell_grad in zip(self.parameters_grad(), module.parameters_grad()):
                 rnn_grad += rnn_cell_grad
@@ -640,7 +634,7 @@ class RNN_Classifier(Module):
         self.encoder = module(in_features, hidden_size)
         self.head = Linear(hidden_size, num_classes)
 
-    def compute_output(self, input: np.array):
+    def compute_output(self, input):
         self.h1 = np.zeros((1, input.shape[0], self.hidden_size))
         if isinstance(self.encoder, LSTM):
             self.c1 = np.zeros((1, input.shape[0], self.hidden_size))
@@ -649,7 +643,7 @@ class RNN_Classifier(Module):
             out = self.encoder(input, self.h1)
         return self.head(out)
 
-    def compute_grad_input(self, input: np.array, grad_output: np.array):
+    def compute_grad_input(self, input, grad_output):
         if isinstance(self.encoder, LSTM):
             return self.encoder.backward(input, self.h1, self.c1,
                                          self.head.backward(self.encoder.output[0], grad_output)[np.newaxis, :])[0]

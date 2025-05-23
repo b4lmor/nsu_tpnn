@@ -20,7 +20,7 @@ model = RNN_Classifier(X_train.shape[1], NUM_CLASSES, HIDDEN_SIZE, RNN)
 
 
 def train_model(model, train_loader, test_loader, model_name, num_epochs=NUM_EPOCHS):
-    optimizer = SGD(model, lr=0.01, momentum=0.9)
+    optimizer = SGD(model, lr=0.01)
     criterion = CrossEntropyLoss()
 
     RNN_train_losses, RNN_train_accuracies = [], []
